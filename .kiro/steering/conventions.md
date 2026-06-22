@@ -108,7 +108,7 @@ const scoreColor = clsx({
 - ALWAYS validate request bodies with Zod schemas.
 - Success response shape: `{ data: T }`
 - Error response shape: `{ error: { code: string, message: string } }`
-- One router file per resource (e.g. `recommendations.ts`, `squads.ts`).
+- One router file per resource (e.g. `demand.ts`, `squads.ts`, `candidates.ts`).
 - Middleware in `src/middleware/`. Routes in `src/routes/`.
 
 CORRECT:
@@ -116,32 +116,30 @@ CORRECT:
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 
-const RecommendationRequestSchema = z.object({
-  intent: z.string().min(1),
-  priority: z.enum(['urgent-regulatory', 'high', 'medium', 'low']),
+const DemandRequestSchema = z.object({
+  squadIntent: z.string().min(1),
   projectCode: z.string().regex(/^[A-Z]{3}-\d{4}-\d{3}$/),
-  competencies: z.array(z.string()).min(1),
-  weights: z.object({
-    skills: z.number(),
-    domain: z.number(),
-    tenure: z.number(),
-  }),
+  priorityLevel: z.enum(['High', 'Medium', 'Low']),
+  requiredRole: z.string().min(1),
+  requiredSkills: z.array(z.string()).min(1),
+  expectedDurationWeeks: z.number().positive(),
+  businessDomain: z.string().min(1),
 });
 
 const router = Router();
 
 router.post('/', async (req: Request, res: Response) => {
-  const parsed = RecommendationRequestSchema.safeParse(req.body);
+  const parsed = DemandRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
-      error: { code: 'INVALID_REQUEST', message: parsed.error.message },
+      error: { code: 'VALIDATION_FAILED', message: parsed.error.message },
     });
   }
-  const candidates = await scoreCandidates(parsed.data);
-  return res.json({ data: candidates });
+  const candidates = await rankCandidates(parsed.data);
+  return res.json({ data: { demandId: 'D001', candidates } });
 });
 
-export { router as recommendationsRouter };
+export { router as demandRouter };
 ```
 
 ---
@@ -174,30 +172,38 @@ model Candidate {
 
 - ALL suitability scoring MUST be rules-based weighted arithmetic.
 - NEVER import or use AI/ML libraries (tensorflow, brain.js, ml5, etc.).
-- Formula: `suitability = (skills/maxSkills × wSkills) + (domain/maxDomain × wDomain) + (tenure/maxTenure × wTenure)`
-- Default weights: Skills=50, Domain=30, Tenure=20.
+- Formula: `S_Total = (0.50 × S_Skill) + (0.30 × S_Avail) + (0.20 × S_Role)`
+- Factors: Skill Match (50%), Availability (30%), Role Alignment (20%).
+- Individual scores range 0–100. Total is the weighted sum rounded to 2 decimal places.
 - Scoring functions MUST be pure (no side effects) and independently unit-testable.
 
 CORRECT:
 ```ts
-interface CandidateScores {
-  skills: { value: number; max: number };
-  domain: { value: number; max: number };
-  tenure: { value: number; max: number };
-}
+export const calculateSkillScore = (
+  requiredSkills: string[],
+  candidateSkills: { name: string; level: number }[],
+): number => {
+  if (requiredSkills.length === 0) return 0;
+  const scores = requiredSkills.map((skill) => {
+    const found = candidateSkills.find((s) => s.name === skill);
+    if (!found) return 0;
+    return found.level >= 4 ? 100 : 80;
+  });
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+};
 
-interface Weights {
-  skills: number;
-  domain: number;
-  tenure: number;
-}
+export const calculateAvailabilityScore = (allocationPercentage: number): number => {
+  if (allocationPercentage === 0) return 100;
+  if (allocationPercentage <= 50) return 70;
+  return 20;
+};
 
-export const calculateSuitability = (scores: CandidateScores, weights: Weights): number => {
-  const total =
-    (scores.skills.value / scores.skills.max) * weights.skills +
-    (scores.domain.value / scores.domain.max) * weights.domain +
-    (scores.tenure.value / scores.tenure.max) * weights.tenure;
-  return Math.round(total);
+export const calculateRoleScore = (requestedRole: string, candidateRole: string): number => {
+  return requestedRole === candidateRole ? 100 : 0;
+};
+
+export const calculateTotalScore = (sSkill: number, sAvail: number, sRole: number): number => {
+  return Math.round(((0.5 * sSkill) + (0.3 * sAvail) + (0.2 * sRole)) * 100) / 100;
 };
 ```
 
@@ -217,27 +223,24 @@ export const calculateSuitability = (scores: CandidateScores, weights: Weights):
 CORRECT:
 ```ts
 import { describe, it, expect } from 'vitest';
-import { calculateSuitability } from './scoring-service';
+import { calculateSkillScore, calculateTotalScore } from './scoring-service';
 
-describe('calculateSuitability', () => {
-  it('returns weighted sum as integer percentage', () => {
-    const scores = {
-      skills: { value: 48, max: 50 },
-      domain: { value: 28, max: 30 },
-      tenure: { value: 18, max: 20 },
-    };
-    const weights = { skills: 50, domain: 30, tenure: 20 };
-    expect(calculateSuitability(scores, weights)).toBe(94);
+describe('calculateSkillScore', () => {
+  it('returns 100 for exact skill with level >= 4', () => {
+    const result = calculateSkillScore(['React'], [{ name: 'React', level: 5 }]);
+    expect(result).toBe(100);
   });
 
-  it('returns 0 when all scores are zero', () => {
-    const scores = {
-      skills: { value: 0, max: 50 },
-      domain: { value: 0, max: 30 },
-      tenure: { value: 0, max: 20 },
-    };
-    const weights = { skills: 50, domain: 30, tenure: 20 };
-    expect(calculateSuitability(scores, weights)).toBe(0);
+  it('returns 0 when skill is not found', () => {
+    const result = calculateSkillScore(['GraphQL'], [{ name: 'React', level: 5 }]);
+    expect(result).toBe(0);
+  });
+});
+
+describe('calculateTotalScore', () => {
+  it('returns correct weighted sum', () => {
+    // (0.50 × 93.33) + (0.30 × 70) + (0.20 × 100) = 87.67
+    expect(calculateTotalScore(93.33, 70, 100)).toBe(87.67);
   });
 });
 ```
@@ -249,9 +252,9 @@ describe('calculateSuitability', () => {
 | Type             | Convention    | Example                     |
 |------------------|---------------|-----------------------------|
 | Components       | PascalCase    | `CandidateCard.tsx`         |
-| Hooks            | camelCase     | `useRecommendations.ts`     |
+| Hooks            | camelCase     | `useDemandForm.ts`          |
 | Utils/services   | kebab-case    | `scoring-service.ts`        |
-| Route handlers   | kebab-case    | `recommendations.ts`        |
+| Route handlers   | kebab-case    | `demand.ts`, `squads.ts`    |
 | Test files       | match source  | `CandidateCard.test.tsx`    |
 | Prisma models    | PascalCase    | `Candidate`, `Squad`        |
 | Directories      | kebab-case    | `candidate-cards/`          |

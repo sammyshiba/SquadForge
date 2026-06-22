@@ -33,19 +33,28 @@ This is an npm workspaces monorepo. All new files MUST be placed according to th
 │   │       ├── api/              # API client functions
 │   │       │   └── client.ts     # Fetch wrapper for backend calls
 │   │       ├── components/       # Reusable UI components
-│   │       │   ├── Layout.tsx
-│   │       │   ├── SkillTag.tsx
 │   │       │   ├── CandidateCard.tsx
-│   │       │   ├── ScoreBreakdown.tsx
-│   │       │   └── SquadSummary.tsx
+│   │       │   ├── CandidateBreakdown.tsx
+│   │       │   ├── AvailabilityBadge.tsx
+│   │       │   ├── SuitabilityScore.tsx
+│   │       │   ├── ScoreBar.tsx
+│   │       │   ├── SkillChip.tsx
+│   │       │   ├── ProposedSquadBar.tsx
+│   │       │   └── FilterBar.tsx
 │   │       ├── pages/            # Route-level page components
-│   │       │   ├── RequestForm.tsx       # Capture delivery need
+│   │       │   ├── DemandCenter.tsx      # Capture delivery need
 │   │       │   ├── CandidateList.tsx     # Ranked shortlist results
-│   │       │   └── SquadReview.tsx       # Review and confirm squad
+│   │       │   └── SquadSummary.tsx      # Review and confirm squad
 │   │       ├── hooks/            # Custom React hooks
+│   │       │   ├── useSquadForge.ts
+│   │       │   └── useDemandForm.ts
+│   │       ├── context/          # React Context providers
+│   │       │   └── SquadContext.tsx
 │   │       ├── types/            # Frontend-specific types
 │   │       │   └── index.ts
 │   │       └── utils/            # UI helper functions
+│   │           ├── generate-reason.ts
+│   │           └── export-squad.ts
 │   ├── backend/                  # Express API server
 │   │   ├── package.json
 │   │   ├── tsconfig.json
@@ -56,13 +65,14 @@ This is an npm workspaces monorepo. All new files MUST be placed according to th
 │   │   └── src/
 │   │       ├── index.ts          # Server entry point
 │   │       ├── routes/           # Express route handlers
-│   │       │   ├── requests.ts   # POST /requests, GET /requests/:id
-│   │       │   ├── candidates.ts # GET /candidates (ranked shortlist)
-│   │       │   └── squads.ts     # POST /squads, GET /squads/:id
+│   │       │   ├── health.ts     # GET /health, GET /api/health
+│   │       │   ├── info.ts       # GET /api/info
+│   │       │   ├── echo.ts       # POST /api/echo
+│   │       │   ├── demand.ts     # POST /api/workspace/demand
+│   │       │   ├── candidates.ts # GET /api/workspace/:demandId/candidates
+│   │       │   └── squads.ts     # POST /api/squad, finalize, reset, export
 │   │       ├── services/         # Business logic layer
-│   │       │   ├── scoring.ts    # Rules-based candidate scoring
-│   │       │   ├── matching.ts   # Skill matching logic
-│   │       │   └── ranking.ts    # Sort and rank candidates
+│   │       │   └── scoring-service.ts  # Rules-based candidate scoring + ranking
 │   │       ├── middleware/       # Express middleware
 │   │       │   ├── errorHandler.ts
 │   │       │   └── validation.ts

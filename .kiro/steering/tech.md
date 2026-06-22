@@ -26,7 +26,7 @@ All code generation and architectural decisions MUST use the following stack. Do
 
 - **Engine:** SQLite
 - **ORM:** Prisma
-- Schema lives in `backend/prisma/schema.prisma`
+- Schema lives in `packages/backend/prisma/schema.prisma`
 - Use Prisma Client for all database access — no raw SQL unless absolutely necessary
 - Migrations managed via `npx prisma migrate dev`
 
