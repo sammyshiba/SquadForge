@@ -57,6 +57,108 @@
 
 ---
 
+## Feature 3: Frontend Application
+
+### TC-3.1: Health Status — Online
+
+**Requirement:** REQ-3.1  
+**Type:** Unit  
+**Priority:** Critical
+
+**Steps:**
+1. Mock `/api/health` to return 200
+2. Render App component
+
+**Expected:** Green "Online" badge displayed with timestamp.
+
+### TC-3.2: Health Status — Error
+
+**Requirement:** REQ-3.2  
+**Type:** Unit  
+**Priority:** High
+
+**Steps:**
+1. Mock `/api/health` to return network error
+2. Render App component
+
+**Expected:** Red "Offline" or error state displayed. No crash.
+
+### TC-3.3: Health Status — Loading
+
+**Requirement:** REQ-3.3  
+**Type:** Unit  
+**Priority:** Medium
+
+**Steps:**
+1. Mock `/api/health` with delayed response
+2. Render App component
+
+**Expected:** Loading spinner or "Checking backend..." text visible before response arrives.
+
+### TC-3.4: Counter Increment
+
+**Requirement:** REQ-3.4  
+**Type:** Unit  
+**Priority:** Medium
+
+**Steps:**
+1. Render Counter component
+2. Click "Increment" button 3 times
+
+**Expected:** Counter displays 3.
+
+### TC-3.5: Vite Proxy
+
+**Requirement:** REQ-3.5  
+**Type:** Integration  
+**Priority:** High
+
+**Steps:**
+1. Start frontend dev server
+2. Frontend makes fetch to `/api/health`
+
+**Expected:** Request proxied to backend on port 3001. No CORS error.
+
+---
+
+## Feature 4: Quality & Verification
+
+### TC-4.1: ESLint Catches Errors
+
+**Requirement:** REQ-4.1  
+**Type:** Integration  
+**Priority:** High
+
+**Steps:**
+1. Run `npm run lint`
+
+**Expected:** ESLint runs on all `.ts`/`.tsx` files. Reports violations or exits 0 if clean.
+
+### TC-4.2: Prettier Format Check
+
+**Requirement:** REQ-4.2  
+**Type:** Integration  
+**Priority:** Medium
+
+**Steps:**
+1. Run `npm run format:check`
+
+**Expected:** Prettier reports any unformatted files or exits 0 if all formatted.
+
+### TC-4.3: Playwright Smoke Test
+
+**Requirement:** REQ-4.3  
+**Type:** E2E  
+**Priority:** High
+
+**Steps:**
+1. Start frontend + backend
+2. Run `npx playwright test`
+
+**Expected:** Smoke test loads the app, verifies heading is visible. Passes.
+
+---
+
 ## Feature 5: Demand & Search Workspace
 
 ### TC-5.1: Valid Demand Submission
@@ -310,3 +412,110 @@
 10. Verify summary page shows both candidates
 
 **Expected:** Full journey completes without errors.
+
+---
+
+## E2E: Edge Cases
+
+### TC-E2E-2: Empty Demand Submission
+
+**Type:** E2E (Playwright)  
+**Priority:** High
+
+**Steps:**
+1. Navigate to Demand Center
+2. Click "Generate Recommendations" without filling any fields
+
+**Expected:** Form shows validation errors. No navigation. No API call.
+
+### TC-E2E-3: Finalize With Empty Squad
+
+**Type:** E2E (Playwright)  
+**Priority:** Medium
+
+**Steps:**
+1. Generate recommendations
+2. Attempt to click "Finalize Squad" without assigning anyone
+
+**Expected:** Button is disabled. No navigation.
+
+### TC-E2E-4: Reset and Reassign
+
+**Type:** E2E (Playwright)  
+**Priority:** Medium
+
+**Steps:**
+1. Assign 2 candidates
+2. Click "Reset" → Confirm
+3. Assign 1 different candidate
+4. Finalize
+
+**Expected:** Summary shows only the 1 newly assigned candidate.
+
+---
+
+## Boundary Tests (Unit)
+
+### TC-B1: Skill Score — Empty Required Skills
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** requiredSkills: [], candidate skills: [{ name: "React", level: 5 }]  
+**Expected:** `calculateSkillScore` returns 0.
+
+### TC-B2: Skill Score — All Skills Missing
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** requiredSkills: ["Go", "Rust", "Elixir"], candidate skills: [{ name: "React", level: 5 }]  
+**Expected:** `calculateSkillScore` returns 0.
+
+### TC-B3: Availability — Boundary at 50%
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** allocation: 50  
+**Expected:** `calculateAvailabilityScore` returns 70 (50% is within 1–50 range).
+
+### TC-B4: Availability — Boundary at 51%
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** allocation: 51  
+**Expected:** `calculateAvailabilityScore` returns 20.
+
+### TC-B5: Total Score — All Zeros
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** sSkill: 0, sAvail: 0, sRole: 0  
+**Expected:** `calculateTotalScore` returns 0.
+
+### TC-B6: Total Score — All Maximum
+
+**Type:** Unit  
+**Priority:** Medium
+
+**Input:** sSkill: 100, sAvail: 100, sRole: 100  
+**Expected:** `calculateTotalScore` returns 100.
+
+### TC-B7: Role Score — Case Sensitivity
+
+**Type:** Unit  
+**Priority:** Low
+
+**Input:** requested: "frontend engineer", candidate: "Frontend Engineer"  
+**Expected:** `calculateRoleScore` returns 0 (exact match required, case-sensitive).
+
+### TC-B8: Reason Generation — All Low Scores
+
+**Type:** Unit  
+**Priority:** Low
+
+**Input:** sSkill: 30, sAvail: 20, sRole: 0, allocation: 80  
+**Expected:** Reason contains "Weak skill match", "limited availability", "role mismatch".
