@@ -59,7 +59,7 @@ Managed via npm workspaces. Single `npm install` at root.
 | id                   | string   | PK, UUID                          |
 | squadIntent          | string   | Free text                          |
 | projectCode          | string   | Format: ZAF-YYYY-NNN              |
-| priorityLevel        | string   | urgent-regulatory/high/medium/low  |
+| priorityLevel        | string   | High / Medium / Low                |
 | requiredRole         | string   | Role to match                      |
 | requiredSkills       | json     | Array of skill name strings        |
 | expectedDurationWeeks| number   | > 0                                |
@@ -151,18 +151,22 @@ Input: DemandCriteria + CandidateProfile[]
 ```
 React App (SPA, Vite)
 ├── Pages (route-level)
-│   ├── ResourceQueue.tsx     — main page: form + recommendations + squad bar
-│   └── (future: SquadConfirmation.tsx)
+│   ├── DemandCenter.tsx      — capture delivery need
+│   ├── CandidateList.tsx     — ranked shortlist + squad builder footer
+│   └── SquadSummary.tsx      — confirm and export squad
 ├── Components (reusable)
-│   ├── DemandCaptureForm.tsx
-│   ├── RecommendationQueue.tsx
 │   ├── CandidateCard.tsx
 │   ├── CandidateBreakdown.tsx
+│   ├── AvailabilityBadge.tsx
+│   ├── SuitabilityScore.tsx
+│   ├── ScoreBar.tsx
+│   ├── SkillChip.tsx
 │   ├── ProposedSquadBar.tsx
-│   └── ...utility components
+│   └── FilterBar.tsx
 ├── Context
 │   └── SquadContext.tsx      — shared squad state (useReducer)
 ├── Hooks
+│   ├── useSquadForge.ts     — page-level state orchestration
 │   └── useDemandForm.ts     — form state + validation
 └── Utils
     ├── generate-reason.ts   — rule-based explanation text
