@@ -1,4 +1,4 @@
-# DESIGN — Feature 4: Proposed Squad Builder
+# DESIGN — Feature 8: Proposed Squad Builder
 
 ## Purpose
 
@@ -58,27 +58,25 @@ interface ProposedSquadState {
 
 | Action                  | Rule                                                                       |
 |-------------------------|----------------------------------------------------------------------------|
-| Assign to Squad         | Append candidate. If already exists in array → prevent, show "Already assigned" badge on card. |
+| Assign to Squad         | Append candidate. If already exists → prevent, show "Already assigned".    |
 | Remove candidate        | Filter candidate out of members array. Update filled seats counter.        |
 | Reset Proposal          | Show confirmation dialog. On confirm → `members = []`.                     |
-| Finalize Squad          | DISABLED if `members.length === 0`. On click → show confirmation summary modal with all candidates + scores. |
-| Export Spec             | DISABLED if `members.length === 0`. Generate text/JSON summary for clipboard or download. |
-| Filled seats counter    | Always shows `{members.length} of {totalSeats} seats filled ({percentage}%)`. |
+| Finalize Squad          | DISABLED if `members.length === 0`. Show confirmation summary modal.       |
+| Export Spec             | DISABLED if `members.length === 0`. Generate JSON summary.                 |
+| Filled seats counter    | Always shows `{members.length} of {totalSeats} seats filled ({%})`.        |
 
 ---
 
 ## Duplicate Prevention
 
 When a candidate is already in the squad:
-- "Assign to Squad" button on their card becomes DISABLED
+- "Assign to Squad" button becomes DISABLED
 - Button text changes to "Already Assigned"
 - Button style: `bg-slate-300 text-slate-500 cursor-not-allowed`
 
 ---
 
 ## Confirmation Summary Modal
-
-On "Finalize Squad" click:
 
 ```
 ┌─────────────────────────────────────────┐

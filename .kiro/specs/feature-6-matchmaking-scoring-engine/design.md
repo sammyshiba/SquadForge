@@ -1,4 +1,4 @@
-# DESIGN — Feature 2: Matchmaking & Scoring Engine
+# DESIGN — Feature 6: Matchmaking & Scoring Engine
 
 ## Purpose
 
@@ -80,7 +80,7 @@ interface ScoredCandidate {
   sSkill: number;    // 0-100
   sAvail: number;    // 0, 20, 70, or 100
   sRole: number;     // 0 or 100
-  sTotal: number;    // weighted sum
+  sTotal: number;    // weighted sum, rounded to 2 decimal places
 }
 ```
 
@@ -106,6 +106,6 @@ Given candidate Thabo Mokoena, required skills ["React", "Node", "AWS"], require
 ## Tech Alignment
 
 - Pure functions, no side effects — scoring functions MUST be independently unit-testable
-- NO AI/ML libraries (REQ-018)
+- NO AI/ML libraries (REQ-6.8)
 - File location: `packages/backend/src/services/scoring-service.ts`
 - Tests: `packages/backend/src/services/scoring-service.test.ts`

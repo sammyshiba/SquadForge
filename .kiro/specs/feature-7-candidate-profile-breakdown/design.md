@@ -1,4 +1,4 @@
-# DESIGN — Feature 3: Candidate Profile Breakdown
+# DESIGN — Feature 7: Candidate Profile Breakdown
 
 ## Purpose
 
@@ -37,8 +37,8 @@ When "View Breakdown" is clicked, expand inline to show:
 │ Total Score:     87.67 / 100            │
 │                                         │
 │ Reason:                                 │
-│ Strong match for React and Node, exact  │
-│ role alignment, moderate allocation.    │
+│ Strong skill match, exact role          │
+│ alignment, moderate allocation (40%).   │
 └─────────────────────────────────────────┘
 ```
 
@@ -52,7 +52,7 @@ When "View Breakdown" is clicked, expand inline to show:
 | 1% to 50%         | Partial Capacity  | `bg-yellow-100 text-yellow-700`|
 | > 50%             | Limited Capacity  | `bg-orange-100 text-orange-700`|
 
-When allocation > 50%: MUST show "Limited Capacity" badge prominently (REQ-022).
+When allocation > 50%: MUST show "Limited Capacity" badge prominently (REQ-7.5).
 
 ---
 
@@ -63,14 +63,14 @@ The reason text MUST be generated from scoring rules (NOT AI). Template:
 ```ts
 const generateReason = (scored: ScoredCandidate, candidate: CandidateProfile): string => {
   const parts: string[] = [];
-  if (scored.sSkill >= 80) parts.push(`Strong skill match`);
-  else if (scored.sSkill >= 50) parts.push(`Moderate skill match`);
-  else parts.push(`Weak skill match`);
+  if (scored.sSkill >= 80) parts.push('Strong skill match');
+  else if (scored.sSkill >= 50) parts.push('Moderate skill match');
+  else parts.push('Weak skill match');
 
-  if (scored.sRole === 100) parts.push(`exact role alignment`);
-  else parts.push(`role mismatch`);
+  if (scored.sRole === 100) parts.push('exact role alignment');
+  else parts.push('role mismatch');
 
-  if (scored.sAvail === 100) parts.push(`fully available`);
+  if (scored.sAvail === 100) parts.push('fully available');
   else if (scored.sAvail === 70) parts.push(`moderate allocation (${candidate.currentAllocationPercentage}%)`);
   else parts.push(`limited availability (${candidate.currentAllocationPercentage}% allocated)`);
 
