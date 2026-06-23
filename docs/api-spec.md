@@ -1,298 +1,214 @@
-# API SPECIFICATION — SquadForge
+# API Specification (SquadForge - Requirements Driven)
 
-> **CONSTRAINT:** All responses use the `{ data }` / `{ error }` envelope defined in `conventions.md` RULE 4.  
-> **Backend:** Express + Prisma + SQLite. Zod validation on all request bodies.  
-> **Scoring:** Rules-based only (REQ-6.8). NO AI/ML.
+## POST /workspace/demand
+Create and store demand criteria, then trigger candidate scoring.
 
----
+**Request body:**
+- squadIntent (string, required) — description of delivery work
+- projectCode (string, required) — project identifier
+- priorityLevel (string, required) — urgency level
+- requiredRole (string, required) — required role
+- requiredSkills (array of strings, required) — required skills
+- expectedDurationWeeks (number, required) — duration
+- businessDomain (string, required) — domain context
 
-## Response Envelope
+**Success response (201):**
+- demand_id — unique identifier
+- status — "SCORING_TRIGGERED"
 
-**Success:**
-```json
-{ "data": { ... } }
-```
+**Error responses:**
+- 400 — validation failed (missing role, skills, or project code)
 
-**Error:**
-```json
-{ "error": { "code": "ERROR_CODE", "message": "Human-readable message" } }
-```
-
----
-
-## Health & Info
-
-### GET /health
-
-**Response 200:**
-```json
-{ "data": { "status": "ok", "timestamp": "2024-01-15T10:30:00.000Z" } }
-```
-
-### GET /api/health
-
-**Response 200:**
-```json
-{ "data": { "status": "ok", "timestamp": "2024-01-15T10:30:00.000Z", "uptime": 12345.67 } }
-```
-
-### GET /api/info
-
-**Response 200:**
-```json
-{ "data": { "name": "squadforge-api", "version": "1.0.0", "environment": "development" } }
-```
-
-### POST /api/echo
-
-**Request:**
-```json
-{ "message": "hello" }
-```
-
-**Response 200:**
-```json
-{ "data": { "echo": { "message": "hello" }, "timestamp": "2024-01-15T10:30:00.000Z" } }
-```
+**Example:**
+Request: { "squadIntent": "Retail App Refactor", "projectCode": "ZAF-2024-081", "priorityLevel": "Urgent", "requiredRole": "Frontend Engineer", "requiredSkills": ["React"], "expectedDurationWeeks": 6, "businessDomain": "Retail Banking" }
+Response: { "demand_id": "D001", "status": "SCORING_TRIGGERED" }
 
 ---
 
-## Demand & Scoring
+## GET /workspace/{demand_id}/candidates
+Retrieve ranked candidate recommendations.
 
-### POST /api/workspace/demand
+**Request body:** None
 
-Capture a delivery need and trigger candidate scoring.
+**Success response (200):**
+- demand_id — identifier
+- candidates — list of ranked candidates
+  - candidateId — unique ID
+  - name — candidate name
+  - primaryRole — role
+  - sTotal — suitability score
+  - availabilityLabel — availability status
+  - currentAllocationPercentage — workload
 
-**Request (Zod-validated):**
-```json
-{
-  "squadIntent": "Retail Banking App Refactor",
-  "projectCode": "ZAF-2024-081",
-  "priorityLevel": "Urgent - Regulatory",
-  "requiredRole": "Frontend Engineer",
-  "requiredSkills": ["React", "Node", "AWS"],
-  "expectedDurationWeeks": 6,
-  "businessDomain": "Retail Banking"
-}
-```
+**Error responses:**
+- 404 — demand not found
 
-**Response 201:**
-```json
-{ "data": { "demandId": "D001", "status": "SCORING_TRIGGERED" } }
-```
-
-**Errors:**
-| Status | Code              | Condition                        |
-|--------|-------------------|----------------------------------|
-| 400    | VALIDATION_FAILED | Missing required fields or invalid format |
+**Example:**
+Response: { "demand_id": "D001", "candidates": [{ "candidateId": "EMP-001", "name": "Thabo", "primaryRole": "Frontend Engineer", "sTotal": 87.6, "availabilityLabel": "Available Now", "currentAllocationPercentage": 40 }] }
 
 ---
 
-### GET /api/workspace/:demandId/candidates
+## GET /workspace/{demand_id}/candidates/{candidateId}/breakdown
+Retrieve scoring breakdown and explanation.
 
-Retrieve ranked candidates for a demand.
+**Request body:** None
 
-**Response 200:**
-```json
-{
-  "data": {
-    "demandId": "D001",
-    "candidates": [
-      {
-        "candidateId": "EMP-001",
-        "name": "Thabo Mokoena",
-        "primaryRole": "Frontend Engineer",
-        "skills": [{ "name": "React", "level": 5 }, { "name": "Node", "level": 4 }],
-        "currentAllocationPercentage": 40,
-        "availabilityLabel": "Partial Capacity",
-        "sSkill": 93.33,
-        "sAvail": 70,
-        "sRole": 100,
-        "sTotal": 87.67
-      }
-    ]
-  }
-}
-```
+**Success response (200):**
+- candidateId — identifier
+- sSkill — skill match score
+- sAvailability — availability score
+- sRole — role alignment score
+- sTotal — total score
+- reason — explanation text
 
-**Errors:**
-| Status | Code          | Condition         |
-|--------|---------------|-------------------|
-| 404    | NOT_FOUND     | Demand ID invalid |
+**Error responses:**
+- 404 — not found
+
+**Example:**
+Response: { "candidateId": "EMP-001", "sSkill": 90, "sAvailability": 70, "sRole": 100, "sTotal": 87.6, "reason": "Strong skills and role match with moderate availability" }
 
 ---
 
-### GET /api/workspace/:demandId/candidates/:candidateId/breakdown
+## GET /api/health
+Check backend health.
 
-Retrieve detailed scoring breakdown with rule-based explanation.
+**Request body:** None
 
-**Response 200:**
-```json
-{
-  "data": {
-    "candidateId": "EMP-001",
-    "name": "Thabo Mokoena",
-    "sSkill": 93.33,
-    "sAvail": 70,
-    "sRole": 100,
-    "sTotal": 87.67,
-    "reason": "Strong skill match, exact role alignment, moderate allocation (40%)."
-  }
-}
-```
+**Success response (200):**
+- status — system health
+- timestamp — ISO timestamp
+- uptime — server uptime
 
-**Errors:**
-| Status | Code      | Condition             |
-|--------|-----------|-----------------------|
-| 404    | NOT_FOUND | Demand or candidate ID invalid |
+**Error responses:**
+- 500 — server error
+
+**Example:**
+Response: { "status": "OK", "timestamp": "2026-06-23T09:00:00Z", "uptime": 12345 }
 
 ---
 
-## Squad Management
+## GET /api/info
+Retrieve API metadata.
 
-### POST /api/squad
+**Request body:** None
 
-Create a new proposed squad workspace for a demand.
+**Success response (200):**
+- name — API name
+- version — version number
+- environment — runtime environment
 
-**Request:**
-```json
-{ "demandId": "D001" }
-```
+**Error responses:**
+- 500 — server error
 
-**Response 201:**
-```json
-{ "data": { "squadId": "SQ1", "demandId": "D001", "filledSeats": 0, "status": "draft" } }
-```
-
-**Errors:**
-| Status | Code      | Condition         |
-|--------|-----------|--------------------|
-| 404    | NOT_FOUND | Demand ID invalid  |
+**Example:**
+Response: { "name": "SquadForge API", "version": "1.0.0", "environment": "dev" }
 
 ---
 
-### POST /api/squad/:squadId/members
+## POST /api/echo
+Echo request payload.
 
-Assign a candidate to the squad.
+**Request body:**
+- payload (object, required) — any JSON object
 
-**Request:**
-```json
-{ "candidateId": "EMP-001" }
-```
+**Success response (200):**
+- payload — echoed body
+- receivedAt — timestamp
 
-**Response 200:**
-```json
-{ "data": { "squadId": "SQ1", "filledSeats": 1, "addedCandidate": "EMP-001" } }
-```
+**Error responses:**
+- 400 — invalid input
 
-**Errors:**
-| Status | Code               | Condition                  |
-|--------|--------------------|----------------------------|
-| 400    | DUPLICATE_MEMBER   | Candidate already assigned |
-| 404    | NOT_FOUND          | Squad ID invalid           |
+**Example:**
+Request: { "payload": { "message": "test" } }
+Response: { "payload": { "message": "test" }, "receivedAt": "2026-06-23T09:00:00Z" }
 
 ---
 
-### DELETE /api/squad/:squadId/members/:candidateId
+## POST /squad
+Create a proposed squad workspace.
 
-Remove a candidate from the squad.
+**Request body:**
+- demand_id (string, required) — associated demand
 
-**Response 200:**
-```json
-{ "data": { "squadId": "SQ1", "filledSeats": 0, "removedCandidate": "EMP-001" } }
-```
+**Success response (201):**
+- squad_id — identifier
+- filledSeats — 0
 
-**Errors:**
-| Status | Code      | Condition                      |
-|--------|-----------|--------------------------------|
-| 404    | NOT_FOUND | Squad or candidate not found   |
+**Error responses:**
+- 404 — demand not found
 
----
-
-### POST /api/squad/:squadId/finalize
-
-Lock the squad and return confirmation summary.
-
-**Response 200:**
-```json
-{
-  "data": {
-    "squadId": "SQ1",
-    "status": "finalized",
-    "squadMembers": [
-      { "candidateId": "EMP-001", "name": "Thabo Mokoena", "primaryRole": "Frontend Engineer", "sTotal": 87.67 },
-      { "candidateId": "EMP-004", "name": "Sarah Jenkins", "primaryRole": "Product Owner", "sTotal": 82.40 }
-    ]
-  }
-}
-```
-
-**Errors:**
-| Status | Code         | Condition         |
-|--------|--------------|-------------------|
-| 400    | EMPTY_SQUAD  | No members assigned |
-| 404    | NOT_FOUND    | Squad ID invalid  |
+**Example:**
+Request: { "demand_id": "D001" }
+Response: { "squad_id": "SQ1", "filledSeats": 0 }
 
 ---
 
-### POST /api/squad/:squadId/reset
+## POST /squad/{squad_id}/members
+Assign candidate to squad.
 
-Clear all assigned members, return squad to draft state.
+**Request body:**
+- candidateId (string, required) — candidate to assign
 
-**Response 200:**
-```json
-{ "data": { "squadId": "SQ1", "filledSeats": 0, "status": "draft" } }
-```
+**Success response (200):**
+- squad_id — identifier
+- filledSeats — updated count
 
-**Errors:**
-| Status | Code      | Condition         |
-|--------|-----------|-------------------|
-| 404    | NOT_FOUND | Squad ID invalid  |
+**Error responses:**
+- 400 — duplicate assignment
+- 404 — squad not found
 
----
-
-### GET /api/squad/:squadId/export
-
-Export squad summary for review/download.
-
-**Response 200:**
-```json
-{
-  "data": {
-    "projectCode": "ZAF-2024-081",
-    "squadIntent": "Retail Banking App Refactor",
-    "filledSeats": 2,
-    "squadMembers": [
-      { "candidateId": "EMP-001", "name": "Thabo Mokoena", "primaryRole": "Frontend Engineer", "sTotal": 87.67 }
-    ]
-  }
-}
-```
-
-**Errors:**
-| Status | Code      | Condition         |
-|--------|-----------|-------------------|
-| 404    | NOT_FOUND | Squad ID invalid  |
+**Example:**
+Request: { "candidateId": "EMP-001" }
+Response: { "squad_id": "SQ1", "filledSeats": 1 }
 
 ---
 
-## Scoring Formula Reference
+## DELETE /squad/{squad_id}/members/{candidateId}
+Remove candidate from squad.
 
-```
-S_Total = (0.50 × S_Skill) + (0.30 × S_Avail) + (0.20 × S_Role)
+**Request body:** None
 
-Skill Score:
-  - Skill not found → 0
-  - Skill found, level < 4 → 80
-  - Skill found, level ≥ 4 → 100
-  - Multiple skills → average
+**Success response (200):**
+- squad_id — identifier
+- filledSeats — updated count
 
-Availability Score:
-  - 0% allocated → 100
-  - 1–50% allocated → 70
-  - >50% allocated → 20
+**Error responses:**
+- 404 — not found
 
-Role Score:
-  - Exact match → 100
-  - No match → 0
-```
+**Example:**
+Response: { "squad_id": "SQ1", "filledSeats": 0 }
+
+---
+
+## POST /squad/{squad_id}/finalize
+Finalize squad selection.
+
+**Request body:** None
+
+**Success response (200):**
+- squad_id — identifier
+- status — "FINALIZED"
+- summary — selected members
+
+**Error responses:**
+- 400 — empty squad
+
+**Example:**
+Response: { "squad_id": "SQ1", "status": "FINALIZED" }
+
+---
+
+## POST /squad/{squad_id}/reset
+Reset squad workspace.
+
+**Request body:** None
+
+**Success response (200):**
+- squad_id — identifier
+- filledSeats — 0
+
+**Error responses:**
+- 404 — squad not found
+
+**Example:**
+Response: { "squad_id": "SQ1", "filledSeats": 0 }

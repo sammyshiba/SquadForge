@@ -4,32 +4,48 @@
 
 ### REQ-6.1 (Ubiquitous)
 
-> The system shall calculate suitability using weighted scoring: `S_Total = (0.50 × S_Skill) + (0.30 × S_Avail) + (0.20 × S_Role)`.
+> The system shall calculate suitability using deterministic rules-based weighted scoring.
 
 ### REQ-6.2 (Ubiquitous)
 
-> The system shall calculate skill scores as an average across all required skills.
+> The system shall calculate the total suitability score using the formula: S_Total = (0.50 × S_Skill) + (0.30 × S_Availability) + (0.20 × S_Role).
 
-### REQ-6.3 (Unwanted behaviour)
+### REQ-6.3 (Optional)
 
-> Missing skills shall result in 0 score.
+> Where multiple skills are requested, the system shall calculate the Skill Match Score as an average of individual skill matches.
 
-### REQ-6.4 (Ubiquitous)
+### REQ-6.4 (Unwanted behaviour)
 
-> High skill levels (≥ 4) shall result in maximum score (100).
+> If a skill is missing, then the system shall assign a score of 0 for that skill.
 
-### REQ-6.5 (Ubiquitous)
+### REQ-6.5 (Optional)
 
-> Lower skill levels (< 4) shall result in reduced score (80).
+> Where a candidate has a skill level of 4 or 5, the system shall assign a maximum score for that skill.
 
-### REQ-6.6 (Ubiquitous)
+### REQ-6.6 (Optional)
 
-> Availability shall be calculated from allocation percentage: 0% → 100, 1-50% → 70, >50% → 20.
+> Where a candidate has a skill level below 4, the system shall assign a reduced score for that skill.
 
-### REQ-6.7 (Ubiquitous)
+### REQ-6.7 (Optional)
 
-> Role alignment shall depend on exact matches: match → 100, no match → 0.
+> Where a candidate's allocation is 0%, the system shall assign an Availability Score of 100.
 
-### REQ-6.8 (Ubiquitous)
+### REQ-6.8 (Optional)
 
-> The system shall use rules-based scoring only. No AI or machine learning.
+> Where a candidate's allocation is between 1% and 50%, the system shall assign an Availability Score of 70.
+
+### REQ-6.9 (Optional)
+
+> Where a candidate's allocation is greater than 50%, the system shall assign an Availability Score of 20.
+
+### REQ-6.10 (Ubiquitous)
+
+> The system shall determine role alignment based on exact matches.
+
+### REQ-6.11 (Ubiquitous)
+
+> The system shall factor project duration and urgency into candidate availability and suitability scoring.
+
+### REQ-6.12 (Ubiquitous)
+
+> The system shall use rules-based scoring only.
