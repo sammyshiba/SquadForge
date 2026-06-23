@@ -50,3 +50,11 @@ export const ChevronRightIcon = ({ className = 'w-5 h-5' }: IconProps): JSX.Elem
     <path d="M7 4l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+
+export const SquadIcon = ({ className = 'w-5 h-5' }: IconProps): JSX.Element => (
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden="true">
+    <path d="M10 2l6 3.5v5c0 4.5-3 8-6 9.5-3-1.5-6-5-6-9.5v-5L10 2z" strokeLinejoin="round" />
+    <circle cx="10" cy="8" r="1.5" />
+    <path d="M7.5 13h5M8.5 11h3" strokeLinecap="round" />
+  </svg>
+);

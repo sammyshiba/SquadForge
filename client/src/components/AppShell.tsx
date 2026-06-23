@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 
 import { Logo } from './Logo';
-import { DemandIcon, QueueIcon, AnalyticsIcon, ConfigIcon, BellIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { DemandIcon, QueueIcon, AnalyticsIcon, ConfigIcon, SquadIcon, BellIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -16,6 +16,7 @@ export const AppShell = ({ children }: AppShellProps): JSX.Element => {
   const navItems = [
     { path: '/', label: 'Demand Center', icon: <DemandIcon /> },
     { path: '/candidates', label: 'Resource Queue', icon: <QueueIcon /> },
+    { path: '/squad-summary', label: 'Squad Summary', icon: <SquadIcon /> },
     { path: '/analytics', label: 'Analytics', icon: <AnalyticsIcon /> },
     { path: '/team-config', label: 'Team Config', icon: <ConfigIcon /> },
   ];
