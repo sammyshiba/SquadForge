@@ -1,521 +1,382 @@
-# TEST CASES — SquadForge
+# Test Cases
 
-> **Framework:** Vitest (unit), Playwright (E2E). See `conventions.md` RULE 7.
+## TC-001: Backend Health Check Returns OK
 
----
+* GIVEN the backend server is running
+* WHEN a client sends `GET /api/health`
+* THEN the system returns HTTP 200
+* AND the response contains `status`, `timestamp`, and `uptime`
 
-## Feature 1: Project Setup
+## TC-002: Root Health Check Returns OK
 
-### TC-1.1: Monorepo Install
+* GIVEN the backend server is running
+* WHEN a client sends `GET /health`
+* THEN the system returns HTTP 200
+* AND the response contains a health status and timestamp
 
-**Requirement:** REQ-1.1  
-**Type:** Integration  
-**Priority:** Critical
+## TC-003: API Info Returns Metadata
 
-**Steps:**
-1. Clone fresh repo
-2. Run `npm install` at root
+* GIVEN the backend server is running
+* WHEN a client sends `GET /api/info`
+* THEN the system returns HTTP 200
+* AND the response contains API `name`, `version`, and `environment`
 
-**Expected:** All workspace dependencies installed. No errors.
+## TC-004: Echo Endpoint Returns Submitted Payload
 
----
+* GIVEN the backend server is running
+* WHEN a client sends `POST /api/echo` with payload `{ "message": "test" }`
+* THEN the system returns HTTP 200
+* AND the response contains the same payload
+* AND the response contains a `receivedAt` timestamp
 
-## Feature 2: Backend API
+## TC-005: Echo Endpoint Rejects Invalid Input
 
-### TC-2.1: Health Endpoint
-
-**Requirement:** REQ-2.1  
-**Type:** Unit  
-**Priority:** High
-
-**Steps:**
-1. Send `GET /health`
-
-**Expected:** 200 response with `{ data: { status: "ok", timestamp: <ISO string> } }`
-
-### TC-2.2: Echo Endpoint
-
-**Requirement:** REQ-2.4  
-**Type:** Unit  
-**Priority:** Medium
-
-**Steps:**
-1. Send `POST /api/echo` with `{ "message": "hello" }`
-
-**Expected:** 200 response with `{ data: { echo: { message: "hello" }, timestamp: <ISO string> } }`
-
-### TC-2.3: Error Handler
-
-**Requirement:** REQ-2.6  
-**Type:** Unit  
-**Priority:** High
-
-**Steps:**
-1. Trigger an unhandled error in a route
-
-**Expected:** Structured error response `{ error: { code, message } }`. Server does NOT crash.
+* GIVEN the backend server is running
+* WHEN a client sends `POST /api/echo` with an invalid or missing payload
+* THEN the system returns HTTP 400
+* AND the error response is structured
 
 ---
 
-## Feature 3: Frontend Application
+## TC-006: Demand Center Form Is Displayed
 
-### TC-3.1: Health Status — Online
+* GIVEN the user opens the Demand Center
+* WHEN the page loads successfully
+* THEN the system displays the demand capture form
+* AND the form includes required role, skills, project urgency, expected duration, business domain, and project code fields
 
-**Requirement:** REQ-3.1  
-**Type:** Unit  
-**Priority:** Critical
+## TC-007: Successful Demand Creation
 
-**Steps:**
-1. Mock `/api/health` to return 200
-2. Render App component
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a valid demand with `squadIntent="Retail App Refactor"`, `projectCode="ZAF-2024-081"`, `priorityLevel="Urgent"`, `requiredRole="Frontend Engineer"`, `requiredSkills=["React"]`, `expectedDurationWeeks=6`, and `businessDomain="Retail Banking"`
+* THEN the system creates the demand successfully
+* AND returns HTTP 201
+* AND returns a `demand_id`
+* AND returns status `SCORING_TRIGGERED`
 
-**Expected:** Green "Online" badge displayed with timestamp.
+## TC-008: Reject Demand Without Required Role
 
-### TC-3.2: Health Status — Error
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a demand without `requiredRole`
+* THEN the system returns HTTP 400
+* AND the error message indicates that the required role is missing
 
-**Requirement:** REQ-3.2  
-**Type:** Unit  
-**Priority:** High
+## TC-009: Reject Demand Without Skills
 
-**Steps:**
-1. Mock `/api/health` to return network error
-2. Render App component
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a demand with an empty `requiredSkills` array
+* THEN the system returns HTTP 400
+* AND the error message indicates that at least one skill is required
 
-**Expected:** Red "Offline" or error state displayed. No crash.
+## TC-010: Reject Demand Without Project Code
 
-### TC-3.3: Health Status — Loading
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a demand without `projectCode`
+* THEN the system returns HTTP 400
+* AND the error message indicates that project code is required
 
-**Requirement:** REQ-3.3  
-**Type:** Unit  
-**Priority:** Medium
+## TC-011: Reject Demand Without Expected Duration
 
-**Steps:**
-1. Mock `/api/health` with delayed response
-2. Render App component
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a demand without `expectedDurationWeeks`
+* THEN the system returns HTTP 400
+* AND the demand is not stored
 
-**Expected:** Loading spinner or "Checking backend..." text visible before response arrives.
+## TC-012: Reject Demand With Invalid Duration
 
-### TC-3.4: Counter Increment
+* GIVEN a delivery lead is on the demand capture form
+* WHEN they submit a demand with `expectedDurationWeeks=0`
+* THEN the system returns HTTP 400
+* AND the error message indicates that expected duration must be valid
 
-**Requirement:** REQ-3.4  
-**Type:** Unit  
-**Priority:** Medium
+## TC-013: Store Active Demand Criteria During Session
 
-**Steps:**
-1. Render Counter component
-2. Click "Increment" button 3 times
+* GIVEN a delivery lead has entered demand criteria
+* WHEN the user remains in the current session
+* THEN the system stores the active demand criteria
+* AND the entered values remain available for scoring and squad building
 
-**Expected:** Counter displays 3.
+## TC-014: Recalculate Results When Demand Fields Change
 
-### TC-3.5: Vite Proxy
+* GIVEN ranked candidates are displayed for an active demand
+* WHEN the user modifies the required role, skills, urgency, or duration
+* THEN the system recalculates candidate scores
+* AND updates the displayed ranking in real time
 
-**Requirement:** REQ-3.5  
-**Type:** Integration  
-**Priority:** High
+## TC-015: Display Ranked Candidates Within One Second
 
-**Steps:**
-1. Start frontend dev server
-2. Frontend makes fetch to `/api/health`
-
-**Expected:** Request proxied to backend on port 3001. No CORS error.
-
----
-
-## Feature 4: Quality & Verification
-
-### TC-4.1: ESLint Catches Errors
-
-**Requirement:** REQ-4.1  
-**Type:** Integration  
-**Priority:** High
-
-**Steps:**
-1. Run `npm run lint`
-
-**Expected:** ESLint runs on all `.ts`/`.tsx` files. Reports violations or exits 0 if clean.
-
-### TC-4.2: Prettier Format Check
-
-**Requirement:** REQ-4.2  
-**Type:** Integration  
-**Priority:** Medium
-
-**Steps:**
-1. Run `npm run format:check`
-
-**Expected:** Prettier reports any unformatted files or exits 0 if all formatted.
-
-### TC-4.3: Playwright Smoke Test
-
-**Requirement:** REQ-4.3  
-**Type:** E2E  
-**Priority:** High
-
-**Steps:**
-1. Start frontend + backend
-2. Run `npx playwright test`
-
-**Expected:** Smoke test loads the app, verifies heading is visible. Passes.
+* GIVEN a valid demand has been submitted
+* WHEN scoring is completed
+* THEN the system displays ranked candidates within 1 second
+* AND each candidate has a total suitability score
 
 ---
 
-## Feature 5: Demand & Search Workspace
+## TC-016: Retrieve Ranked Candidate Recommendations
 
-### TC-5.1: Valid Demand Submission
+* GIVEN a valid demand exists with `demand_id="D001"`
+* WHEN the client sends `GET /workspace/D001/candidates`
+* THEN the system returns HTTP 200
+* AND the response contains `demand_id`
+* AND the response contains a ranked `candidates` list
 
-**Requirement:** REQ-5.2  
-**Type:** Integration  
-**Priority:** Critical
+## TC-017: Candidate Result Contains Required Profile Data
 
-**Steps:**
-1. Fill all required fields with valid data
-2. Click "Generate Recommendations"
+* GIVEN ranked candidates are available for a demand
+* WHEN the system returns the candidate list
+* THEN each candidate includes `candidateId`, `name`, `primaryRole`, `sTotal`, `availabilityLabel`, and `currentAllocationPercentage`
+* AND `sTotal` is displayed as a percentage
 
-**Expected:** POST succeeds. Candidate list appears sorted by sTotal descending.
+## TC-018: Demand Not Found When Retrieving Candidates
 
-### TC-5.2: Missing Role Validation
+* GIVEN no demand exists with `demand_id="UNKNOWN"`
+* WHEN the client sends `GET /workspace/UNKNOWN/candidates`
+* THEN the system returns HTTP 404
+* AND the error message indicates that the demand was not found
 
-**Requirement:** REQ-5.5  
-**Type:** Unit  
-**Priority:** High
+## TC-019: Deterministic Scoring Formula Is Applied
 
-**Steps:**
-1. Leave required role empty
-2. Submit form
+* GIVEN a candidate has `S_Skill=100`, `S_Availability=70`, and `S_Role=100`
+* WHEN the scoring engine calculates the total suitability score
+* THEN the system calculates `S_Total = (0.50 × 100) + (0.30 × 70) + (0.20 × 100)`
+* AND the final score is `91`
 
-**Expected:** Inline error "Required role is missing". No API call made.
+## TC-020: Multiple Required Skills Use Average Skill Score
 
-### TC-5.3: Missing Skills Validation
+* GIVEN a demand requires `["React", "Node.js"]`
+* AND a candidate has a maximum score for React and a reduced score for Node.js
+* WHEN the scoring engine calculates `S_Skill`
+* THEN the system averages the individual skill scores
+* AND uses the average in the total suitability score
 
-**Requirement:** REQ-5.6  
-**Type:** Unit  
-**Priority:** High
+## TC-021: Missing Candidate Skill Scores Zero
 
-**Steps:**
-1. Leave required skills empty
-2. Submit form
+* GIVEN a demand requires `["React"]`
+* AND a candidate does not have React in their skill profile
+* WHEN the scoring engine calculates the skill score
+* THEN the system assigns `0` for that skill
+* AND includes the zero score in the total suitability calculation
 
-**Expected:** Inline error "At least one skill is required". No API call made.
+## TC-022: Skill Level 4 or 5 Receives Maximum Skill Score
 
-### TC-5.4: Real-time Recalculation
+* GIVEN a demand requires `["React"]`
+* AND a candidate has React proficiency level `4`
+* WHEN the scoring engine calculates the skill score
+* THEN the system assigns the maximum score for React
+* AND the scoring explanation reflects a strong skill match
 
-**Requirement:** REQ-5.4  
-**Type:** Integration  
-**Priority:** Medium
+## TC-023: Skill Level Below 4 Receives Reduced Skill Score
 
-**Steps:**
-1. Submit valid demand and see results
-2. Change a form field
+* GIVEN a demand requires `["React"]`
+* AND a candidate has React proficiency level `3`
+* WHEN the scoring engine calculates the skill score
+* THEN the system assigns a reduced score for React
+* AND the scoring explanation reflects a partial skill match
 
-**Expected:** Candidate list re-sorts within 1 second without manual resubmit.
+## TC-024: Zero Percent Allocation Receives Full Availability Score
 
----
+* GIVEN a candidate has `currentAllocationPercentage=0`
+* WHEN the scoring engine calculates availability
+* THEN the system assigns `S_Availability=100`
+* AND displays the candidate as available
 
-## Feature 6: Matchmaking & Scoring Engine
+## TC-025: Allocation Between 1 and 50 Percent Receives Medium Availability Score
 
-### TC-6.1: Skill Score — Not Found
+* GIVEN a candidate has `currentAllocationPercentage=40`
+* WHEN the scoring engine calculates availability
+* THEN the system assigns `S_Availability=70`
+* AND displays a moderate availability status
 
-**Requirement:** REQ-6.3  
-**Type:** Unit  
-**Priority:** Critical
+## TC-026: Allocation Greater Than 50 Percent Receives Low Availability Score
 
-**Input:** requiredSkills: ["GraphQL"], candidate skills: [{ name: "React", level: 5 }]  
-**Expected:** `calculateSkillScore` returns 0.
+* GIVEN a candidate has `currentAllocationPercentage=75`
+* WHEN the scoring engine calculates availability
+* THEN the system assigns `S_Availability=20`
+* AND displays availability constraints
 
-### TC-6.2: Skill Score — High Level
+## TC-027: Exact Role Match Receives Full Role Score
 
-**Requirement:** REQ-6.4  
-**Type:** Unit  
-**Priority:** Critical
+* GIVEN a demand requires `Frontend Engineer`
+* AND a candidate has primary role `Frontend Engineer`
+* WHEN the scoring engine calculates role alignment
+* THEN the system assigns the maximum role alignment score
+* AND includes the role score in the total suitability score
 
-**Input:** requiredSkills: ["React"], candidate skills: [{ name: "React", level: 5 }]  
-**Expected:** `calculateSkillScore` returns 100.
+## TC-028: Non-Matching Role Receives Partial Role Score
 
-### TC-6.3: Skill Score — Low Level
+* GIVEN a demand requires `Frontend Engineer`
+* AND a candidate has primary role `Backend Engineer`
+* WHEN the scoring engine calculates role alignment
+* THEN the system assigns a partial role alignment score
+* AND the candidate may still appear if other scores are strong
 
-**Requirement:** REQ-6.5  
-**Type:** Unit  
-**Priority:** Critical
+## TC-029: Scoring Uses Rules-Based Logic Only
 
-**Input:** requiredSkills: ["React"], candidate skills: [{ name: "React", level: 2 }]  
-**Expected:** `calculateSkillScore` returns 80.
-
-### TC-6.4: Skill Score — Average of Multiple
-
-**Requirement:** REQ-6.2  
-**Type:** Unit  
-**Priority:** Critical
-
-**Input:** requiredSkills: ["React", "Node"], candidate skills: [{ name: "React", level: 5 }, { name: "Node", level: 3 }]  
-**Expected:** `calculateSkillScore` returns (100 + 80) / 2 = 90.
-
-### TC-6.5: Availability — Zero Allocation
-
-**Requirement:** REQ-6.6  
-**Type:** Unit  
-**Priority:** High
-
-**Input:** allocation: 0  
-**Expected:** `calculateAvailabilityScore` returns 100.
-
-### TC-6.6: Availability — Partial Allocation
-
-**Requirement:** REQ-6.6  
-**Type:** Unit  
-**Priority:** High
-
-**Input:** allocation: 40  
-**Expected:** `calculateAvailabilityScore` returns 70.
-
-### TC-6.7: Availability — High Allocation
-
-**Requirement:** REQ-6.6  
-**Type:** Unit  
-**Priority:** High
-
-**Input:** allocation: 80  
-**Expected:** `calculateAvailabilityScore` returns 20.
-
-### TC-6.8: Role — Exact Match
-
-**Requirement:** REQ-6.7  
-**Type:** Unit  
-**Priority:** High
-
-**Input:** requested: "Frontend Engineer", candidate: "Frontend Engineer"  
-**Expected:** `calculateRoleScore` returns 100.
-
-### TC-6.9: Role — No Match
-
-**Requirement:** REQ-6.7  
-**Type:** Unit  
-**Priority:** High
-
-**Input:** requested: "Frontend Engineer", candidate: "DevOps Engineer"  
-**Expected:** `calculateRoleScore` returns 0.
-
-### TC-6.10: Total Score Formula
-
-**Requirement:** REQ-6.1  
-**Type:** Unit  
-**Priority:** Critical
-
-**Input:** sSkill: 93.33, sAvail: 70, sRole: 100  
-**Expected:** `calculateTotalScore` returns 87.67 (rounded to 2dp).
+* GIVEN the scoring engine is executed for any demand
+* WHEN candidates are ranked
+* THEN the system uses deterministic rules-based scoring
+* AND does not use AI, ML, or random ranking logic
 
 ---
 
-## Feature 7: Candidate Breakdown
+## TC-030: Retrieve Candidate Breakdown
 
-### TC-7.1: Breakdown Accordion
+* GIVEN a valid demand exists
+* AND candidate `EMP-001` appears in the ranked results
+* WHEN the client sends `GET /workspace/D001/candidates/EMP-001/breakdown`
+* THEN the system returns HTTP 200
+* AND the response contains `sSkill`, `sAvailability`, `sRole`, `sTotal`, and `reason`
 
-**Requirement:** REQ-7.2  
-**Type:** E2E  
-**Priority:** High
+## TC-031: Candidate Breakdown Shows Raw Scoring Values
 
-**Steps:**
-1. View candidates
-2. Click "View Breakdown" on a card
+* GIVEN a candidate breakdown is open
+* WHEN the user views the breakdown details
+* THEN the system displays the raw Skill Match, Availability, and Role Alignment scores
+* AND the displayed total score matches the weighted formula
 
-**Expected:** Accordion expands showing skill, availability, role scores and reason text.
+## TC-032: Candidate Breakdown Provides Rule-Based Explanation
 
-### TC-7.2: Reason Text Generation
+* GIVEN a candidate has strong skills, moderate availability, and exact role match
+* WHEN the user opens the candidate breakdown
+* THEN the system displays a rule-based explanation
+* AND the explanation mentions the relevant scoring factors
 
-**Requirement:** REQ-7.4  
-**Type:** Unit  
-**Priority:** Medium
+## TC-033: Candidate Breakdown Not Found
 
-**Input:** sSkill: 93, sAvail: 70, sRole: 100, allocation: 40  
-**Expected:** Returns string containing "Strong skill alignment" and "exact role match".
-
----
-
-## Feature 8: Proposed Squad Builder
-
-### TC-8.1: Assign Candidate
-
-**Requirement:** REQ-8.1  
-**Type:** E2E  
-**Priority:** Critical
-
-**Steps:**
-1. Click "Assign to Squad" on a candidate card
-
-**Expected:** Candidate appears in footer. Button changes to "Assigned" (disabled). Count updates.
-
-### TC-8.2: Prevent Duplicate
-
-**Requirement:** REQ-8.2  
-**Type:** Unit  
-**Priority:** High
-
-**Steps:**
-1. Assign same candidate twice
-
-**Expected:** Second assignment is a no-op. Array length unchanged.
-
-### TC-8.3: Remove Candidate
-
-**Requirement:** REQ-8.4  
-**Type:** E2E  
-**Priority:** High
-
-**Steps:**
-1. Assign candidate
-2. Click × on their chip in footer
-
-**Expected:** Candidate removed. Count decrements. Card button re-enables.
-
-### TC-8.4: Reset Squad
-
-**Requirement:** REQ-8.8  
-**Type:** E2E  
-**Priority:** Medium
-
-**Steps:**
-1. Assign 3 candidates
-2. Click Reset → Confirm
-
-**Expected:** Footer clears. All card buttons re-enable. Count = 0.
-
-### TC-8.5: Finalize
-
-**Requirement:** REQ-8.7  
-**Type:** E2E  
-**Priority:** Critical
-
-**Steps:**
-1. Assign at least 1 candidate
-2. Click "Finalize Squad"
-
-**Expected:** Navigate to summary page. Shows all assigned candidates with scores.
+* GIVEN demand `D001` exists
+* AND candidate `EMP-999` does not exist for that demand
+* WHEN the client sends `GET /workspace/D001/candidates/EMP-999/breakdown`
+* THEN the system returns HTTP 404
+* AND the error message indicates that the candidate breakdown was not found
 
 ---
 
-## E2E: Full Journey
+## TC-034: Create Proposed Squad Workspace
 
-### TC-E2E-1: Happy Path
+* GIVEN a valid demand exists with `demand_id="D001"`
+* WHEN the client sends `POST /squad` with `demand_id="D001"`
+* THEN the system creates a proposed squad workspace
+* AND returns HTTP 201
+* AND returns a `squad_id`
+* AND returns `filledSeats=0`
 
-**Type:** E2E (Playwright)  
-**Priority:** Critical
+## TC-035: Reject Squad Creation For Missing Demand
 
-**Steps:**
-1. Navigate to Demand Center
-2. Fill form with valid data
-3. Click "Generate Recommendations"
-4. Verify candidates appear ranked
-5. Click "View Breakdown" on top candidate
-6. Verify scores displayed
-7. Click "Assign to Squad" on 2 candidates
-8. Verify footer shows 2 members
-9. Click "Finalize Squad"
-10. Verify summary page shows both candidates
+* GIVEN no demand exists with `demand_id="UNKNOWN"`
+* WHEN the client sends `POST /squad` with `demand_id="UNKNOWN"`
+* THEN the system returns HTTP 404
+* AND no squad workspace is created
 
-**Expected:** Full journey completes without errors.
+## TC-036: Assign Candidate To Squad
+
+* GIVEN a proposed squad exists with `squad_id="SQ1"`
+* AND candidate `EMP-001` is available in the ranked candidates list
+* WHEN the user assigns candidate `EMP-001` to the squad
+* THEN the system adds the candidate to the proposed squad
+* AND returns HTTP 200
+* AND updates `filledSeats` to `1`
+
+## TC-037: Prevent Duplicate Candidate Assignment
+
+* GIVEN candidate `EMP-001` is already assigned to squad `SQ1`
+* WHEN the user attempts to assign `EMP-001` to the same squad again
+* THEN the system prevents the duplicate assignment
+* AND returns HTTP 400
+* AND displays an error message
+
+## TC-038: Assigned Candidate Appears In Sticky Footer Tray
+
+* GIVEN a candidate has been assigned to the proposed squad
+* WHEN the squad builder workspace is active
+* THEN the system displays the candidate in the sticky footer tray
+* AND the filled seat count is updated
+
+## TC-039: Remove Candidate From Squad
+
+* GIVEN candidate `EMP-001` is assigned to squad `SQ1`
+* WHEN the user removes candidate `EMP-001`
+* THEN the system removes the candidate from the squad
+* AND returns HTTP 200
+* AND updates the filled seat count
+
+## TC-040: Remove Candidate Not Found
+
+* GIVEN squad `SQ1` exists
+* AND candidate `EMP-999` is not assigned to the squad
+* WHEN the client sends `DELETE /squad/SQ1/members/EMP-999`
+* THEN the system returns HTTP 404
+* AND the squad member list remains unchanged
+
+## TC-041: Enable Actions When Candidates Are Selected
+
+* GIVEN at least one candidate is assigned to the squad
+* WHEN the squad builder is displayed
+* THEN the system enables finalize, reset, and export actions
+* AND the actions are visible to the user
+
+## TC-042: Finalize Squad Successfully
+
+* GIVEN squad `SQ1` has at least one assigned candidate
+* WHEN the user finalizes the squad
+* THEN the system returns HTTP 200
+* AND updates the squad status to `FINALIZED`
+* AND displays a confirmation summary of selected members
+
+## TC-043: Reject Finalizing Empty Squad
+
+* GIVEN squad `SQ1` has no assigned candidates
+* WHEN the user attempts to finalize the squad
+* THEN the system returns HTTP 400
+* AND the error message indicates that an empty squad cannot be finalized
+
+## TC-044: Reset Squad Workspace
+
+* GIVEN squad `SQ1` has one or more assigned candidates
+* WHEN the user resets the squad
+* THEN the system removes all assigned candidates from the workspace
+* AND returns HTTP 200
+* AND updates `filledSeats` to `0`
+
+## TC-045: Reset Missing Squad
+
+* GIVEN no squad exists with `squad_id="UNKNOWN"`
+* WHEN the client sends `POST /squad/UNKNOWN/reset`
+* THEN the system returns HTTP 404
+* AND no workspace is modified
 
 ---
 
-## E2E: Edge Cases
+## TC-046: Structured Error Response Is Returned
 
-### TC-E2E-2: Empty Demand Submission
+* GIVEN an API error occurs during a request
+* WHEN the server handles the error
+* THEN the system returns a structured error response
+* AND the server does not crash
 
-**Type:** E2E (Playwright)  
-**Priority:** High
+## TC-047: JSON Request Parsing Is Supported
 
-**Steps:**
-1. Navigate to Demand Center
-2. Click "Generate Recommendations" without filling any fields
+* GIVEN the client sends a valid JSON request body
+* WHEN the request reaches the backend
+* THEN the system parses the JSON body correctly
+* AND the endpoint processes the request
 
-**Expected:** Form shows validation errors. No navigation. No API call.
+## TC-048: CORS Is Supported
 
-### TC-E2E-3: Finalize With Empty Squad
+* GIVEN the frontend client sends an API request
+* WHEN the request reaches the backend
+* THEN the server allows permitted cross-origin requests
+* AND the frontend can receive the API response
 
-**Type:** E2E (Playwright)  
-**Priority:** Medium
+## TC-049: Mock Data Is Used For Candidate Scoring
 
-**Steps:**
-1. Generate recommendations
-2. Attempt to click "Finalize Squad" without assigning anyone
+* GIVEN the system is running in the prototype environment
+* WHEN candidate scoring is executed
+* THEN the system uses mock candidate data only
+* AND no external HR or capacity system is called
 
-**Expected:** Button is disabled. No navigation.
+## TC-050: Candidate Ranking Is Reproducible
 
-### TC-E2E-4: Reset and Reassign
-
-**Type:** E2E (Playwright)  
-**Priority:** Medium
-
-**Steps:**
-1. Assign 2 candidates
-2. Click "Reset" → Confirm
-3. Assign 1 different candidate
-4. Finalize
-
-**Expected:** Summary shows only the 1 newly assigned candidate.
-
----
-
-## Boundary Tests (Unit)
-
-### TC-B1: Skill Score — Empty Required Skills
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** requiredSkills: [], candidate skills: [{ name: "React", level: 5 }]  
-**Expected:** `calculateSkillScore` returns 0.
-
-### TC-B2: Skill Score — All Skills Missing
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** requiredSkills: ["Go", "Rust", "Elixir"], candidate skills: [{ name: "React", level: 5 }]  
-**Expected:** `calculateSkillScore` returns 0.
-
-### TC-B3: Availability — Boundary at 50%
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** allocation: 50  
-**Expected:** `calculateAvailabilityScore` returns 70 (50% is within 1–50 range).
-
-### TC-B4: Availability — Boundary at 51%
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** allocation: 51  
-**Expected:** `calculateAvailabilityScore` returns 20.
-
-### TC-B5: Total Score — All Zeros
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** sSkill: 0, sAvail: 0, sRole: 0  
-**Expected:** `calculateTotalScore` returns 0.
-
-### TC-B6: Total Score — All Maximum
-
-**Type:** Unit  
-**Priority:** Medium
-
-**Input:** sSkill: 100, sAvail: 100, sRole: 100  
-**Expected:** `calculateTotalScore` returns 100.
-
-### TC-B7: Role Score — Case Sensitivity
-
-**Type:** Unit  
-**Priority:** Low
-
-**Input:** requested: "frontend engineer", candidate: "Frontend Engineer"  
-**Expected:** `calculateRoleScore` returns 0 (exact match required, case-sensitive).
-
-### TC-B8: Reason Generation — All Low Scores
-
-**Type:** Unit  
-**Priority:** Low
-
-**Input:** sSkill: 30, sAvail: 20, sRole: 0, allocation: 80  
-**Expected:** Reason contains "Weak skill match", "limited availability", "role mismatch".
+* GIVEN the same demand and same mock candidate data are used
+* WHEN scoring is executed multiple times
+* THEN the system returns the same candidate scores
+* AND the ranking order remains consistent
