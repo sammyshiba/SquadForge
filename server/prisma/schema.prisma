@@ -1,5 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// SquadForge — Prisma Schema
+// Engine: SQLite (dev), PostgreSQL (prod — swap via DATABASE_URL)
+// Conventions: uuid PKs, createdAt/updatedAt on all entities
+// Note: SQLite does not support native enums; valid values are enforced at the API layer via Zod.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,11 +12,111 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Example model - customize as needed
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ---------------------------------------------------------------------------
+// DEMAND — captures a delivery need (REQ-5.1–5.10, API: POST /api/demands)
+// ---------------------------------------------------------------------------
+model DemandRequest {
+  id             String   @id @default(uuid())
+  squadIntent    String                              // Free-text description of the work/goal
+  businessDomain String                              // e.g. "Retail Banking"
+  projectCode    String                              // Format: ZAF-YYYY-### (validated via Zod)
+  requiredRole   String                              // FRONTEND | BACKEND | FULLSTACK | DESIGN | QA | DATA | PLATFORM
+  requiredSkills String                              // Comma-separated skill names (SQLite compat)
+  urgency        String                              // LOW | MEDIUM | HIGH | CRITICAL
+  durationWeeks  Int                                 // Expected project duration in weeks
+
+  squads         ProposedSquad[]
+  scoringResults ScoringResult[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// EMPLOYEE — internal team member (seeded from mock HR data)
+// ---------------------------------------------------------------------------
+model EmployeeProfile {
+  id                          String            @id @default(uuid())
+  email                       String            @unique    // Stable identity key
+  fullName                    String
+  primaryRole                 String                       // FRONTEND | BACKEND | FULLSTACK | DESIGN | QA | DATA | PLATFORM
+  currentAllocationPercentage Int               @default(0) // Cached projection; recomputed in transaction (Arch §8)
+  availabilityDate            DateTime                     // Earliest date available
+  geographicLocation          String                       // e.g. "Johannesburg, ZA"
+
+  skills                      SkillProfile[]
+  memberships                 SquadMembership[]
+  scoringResults              ScoringResult[]
+
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// SKILL — per-employee proficiency (REQ-6.2–6.6: skill match scoring)
+// ---------------------------------------------------------------------------
+model SkillProfile {
+  id               String          @id @default(uuid())
+  employee         EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId       String
+  skill            String                              // e.g. "React", "TypeScript", "Architecture"
+  proficiencyLevel Int                                 // 1–5; validated at API layer
+
+  @@unique([employeeId, skill])                        // One proficiency record per skill per employee
+  @@index([skill])                                     // Fast lookup for skill-match queries
+}
+
+// ---------------------------------------------------------------------------
+// SCORING RESULT — persisted scoring run for audit & breakdown endpoint
+// (API: POST /api/score, GET /api/demands/:id/candidates/:candidateId/breakdown)
+// ---------------------------------------------------------------------------
+model ScoringResult {
+  id           String          @id @default(uuid())
+  demand       DemandRequest   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  demandId     String
+  employee     EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId   String
+  sTotal       Float                                   // Weighted total: 0.0–1.0
+  sSkill       Float                                   // Skill match sub-score: 0.0–1.0
+  sAvail       Float                                   // Availability sub-score: 0.0–1.0
+  sRole        Float                                   // Role alignment sub-score: 0.0–1.0
+  rank         Int                                     // Position in ranked list (1-based)
+  reason       String                                  // Rule-based explanation (REQ-7.4)
+
+  createdAt    DateTime        @default(now())
+
+  @@unique([demandId, employeeId])                     // One score per employee per demand run
+  @@index([demandId, rank])                            // Fast ranked retrieval
+}
+
+// ---------------------------------------------------------------------------
+// PROPOSED SQUAD — workspace for assembling a team (REQ-8.1–8.8)
+// ---------------------------------------------------------------------------
+model ProposedSquad {
+  id        String            @id @default(uuid())
+  squadName String
+  demand    DemandRequest     @relation(fields: [demandId], references: [id], onDelete: Restrict)
+  demandId  String
+  status    String            @default("DRAFT")        // DRAFT | FINALIZED | ABANDONED
+
+  members   SquadMembership[]
+
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt               // Used as optimistic-lock token (Arch §8)
+}
+
+// ---------------------------------------------------------------------------
+// SQUAD MEMBERSHIP — join table with unique constraint to prevent duplicates
+// (Arch §8: @@unique + $transaction = concurrency safety)
+// ---------------------------------------------------------------------------
+model SquadMembership {
+  id           String          @id @default(uuid())
+  squad        ProposedSquad   @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  squadId      String
+  employee     EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId   String
+  assignedDate DateTime        @default(now())
+
+  @@unique([squadId, employeeId])                      // Prevents double-assignment (REQ-8.2)
+  @@index([employeeId])                                // Fast lookup for employee's active squads
 }

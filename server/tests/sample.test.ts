@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
-describe('Sample Test', () => {
-  it('should pass', () => {
-    expect(true).toBe(true);
+describe('Server Smoke Tests', () => {
+  it('should pass basic arithmetic', () => {
+    expect(2 + 3).toBe(5);
   });
 
-  it('should add numbers correctly', () => {
-    const add = (a: number, b: number) => a + b;
-    expect(add(2, 3)).toBe(5);
+  it('should have NODE_ENV default to test or development', () => {
+    const env = process.env.NODE_ENV || 'development';
+    expect(['development', 'test']).toContain(env);
   });
 });

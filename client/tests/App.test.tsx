@@ -1,21 +1,24 @@
-import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import App from '../src/App';
+import { render, screen } from '@testing-library/react';
+
+import { App } from '../src/App';
 
 describe('App', () => {
-  it('renders the app heading', async () => {
+  it('renders the app shell with navigation', () => {
     render(<App />);
-    expect(await screen.findByRole('heading', { name: /node conf starter/i })).toBeInTheDocument();
+    expect(screen.getByText('SquadForge')).toBeInTheDocument();
   });
 
-  it('renders the increment button', async () => {
+  it('renders the Demand Center heading on root route', () => {
     render(<App />);
-    expect(await screen.findByRole('button', { name: /increment/i })).toBeInTheDocument();
+    const headings = screen.getAllByRole('heading', { name: /demand center/i });
+    expect(headings.length).toBeGreaterThan(0);
   });
 
-  it('shows the backend health status once loaded', async () => {
+  it('displays navigation items', () => {
     render(<App />);
-    // fetch is stubbed in tests/setup.ts to return { status: 'healthy' }
-    expect(await screen.findByText('healthy')).toBeInTheDocument();
+    expect(screen.getByText('Resource Queue')).toBeDefined();
+    expect(screen.getByText('Analytics')).toBeDefined();
+    expect(screen.getByText('Team Config')).toBeDefined();
   });
 });

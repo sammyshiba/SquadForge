@@ -26,7 +26,7 @@ All code generation and architectural decisions MUST use the following stack. Do
 
 - **Engine:** SQLite
 - **ORM:** Prisma
-- Schema lives in `packages/backend/prisma/schema.prisma`
+- Schema lives in `server/prisma/schema.prisma`
 - Use Prisma Client for all database access — no raw SQL unless absolutely necessary
 - Migrations managed via `npx prisma migrate dev`
 
@@ -41,10 +41,10 @@ All code generation and architectural decisions MUST use the following stack. Do
 
 - **Package manager:** npm (do not use yarn or pnpm)
 - **Monorepo structure:** npm workspaces
-  - `packages/frontend/` — React + Vite app
-  - `packages/backend/` — Express API server
+  - `client/` — React + Vite app
+  - `server/` — Express API server
 - Root `package.json` defines workspaces
-- Shared types can live in a `packages/shared/` workspace if needed
+- Shared types can live in a `shared/` workspace if needed
 
 ## Key Commands
 
@@ -53,23 +53,29 @@ All code generation and architectural decisions MUST use the following stack. Do
 npm install
 
 # Run frontend dev server
-npm run dev --workspace=packages/frontend
+npm run dev --workspace=client
 
 # Run backend dev server
-npm run dev --workspace=packages/backend
+npm run dev --workspace=server
+
+# Run all dev servers concurrently
+npm run dev
 
 # Run unit tests
-npm run test --workspace=packages/frontend
-npm run test --workspace=packages/backend
+npm run test --workspace=client
+npm run test --workspace=server
+
+# Run all tests
+npm test
 
 # Run E2E tests
-npx playwright test
+npm run test:e2e
 
 # Generate Prisma client after schema changes
-npx prisma generate --schema=packages/backend/prisma/schema.prisma
+npx prisma generate --schema=server/prisma/schema.prisma
 
 # Run database migrations
-npx prisma migrate dev --schema=packages/backend/prisma/schema.prisma
+npx prisma migrate dev --schema=server/prisma/schema.prisma
 ```
 
 ## Constraints
