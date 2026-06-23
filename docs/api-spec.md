@@ -1,214 +1,158 @@
-# API Specification (SquadForge - Requirements Driven)
+# API Specification (SquadForge)
 
-## POST /workspace/demand
-Create and store demand criteria, then trigger candidate scoring.
+This document defines the REST API for SquadForge, aligning with the architectural design in `architecture.md` and functional requirements in `requirements.md`.
+
+## Authentication & Standards
+- **Base URL:** `/api`
+- **Auth:** All domain routes require a `Bearer <JWT>` token.
+- **Roles:** Only users with the `delivery_lead` role can perform write operations.
+- **Validation:** All request bodies are validated using Zod schemas.
+- **Errors:** Returns a standard error envelope: `{ "error": "string", "message": "string", "status": number }`.
+
+---
+
+## 1. Demand & Scoring
+
+### POST /demands
+Capture a new delivery demand.
 
 **Request body:**
-- squadIntent (string, required) — description of delivery work
-- projectCode (string, required) — project identifier
-- priorityLevel (string, required) — urgency level
-- requiredRole (string, required) — required role
-- requiredSkills (array of strings, required) — required skills
-- expectedDurationWeeks (number, required) — duration
-- businessDomain (string, required) — domain context
+- `businessDomain` (string, required) — e.g., "Retail Banking"
+- `projectCode` (string, required) — project identifier
+- `squadIntent` (string, required) — description of the work/goal
+- `requiredRole` (enum, required) — `FRONTEND`, `BACKEND`, `FULLSTACK`, `DESIGN`, `QA`, `DATA`, `PLATFORM`
+- `requiredSkills` (array of strings, required) — skills needed for the role
+- `urgency` (enum, required) — `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+- `durationWeeks` (number, required) — expected project duration
 
-**Success response (201):**
-- demand_id — unique identifier
-- status — "SCORING_TRIGGERED"
-
-**Error responses:**
-- 400 — validation failed (missing role, skills, or project code)
+**Success response (201 Created):**
+Returns the created `DemandRequest` object including its unique `id`.
 
 **Example:**
-Request: { "squadIntent": "Retail App Refactor", "projectCode": "ZAF-2024-081", "priorityLevel": "Urgent", "requiredRole": "Frontend Engineer", "requiredSkills": ["React"], "expectedDurationWeeks": 6, "businessDomain": "Retail Banking" }
-Response: { "demand_id": "D001", "status": "SCORING_TRIGGERED" }
+```json
+{
+  "businessDomain": "Retail Banking",
+  "projectCode": "ZAF-2024-081",
+  "squadIntent": "App Refactor",
+  "requiredRole": "FRONTEND",
+  "requiredSkills": ["React", "TypeScript"],
+  "urgency": "HIGH",
+  "durationWeeks": 12
+}
+```
 
 ---
 
-## GET /workspace/{demand_id}/candidates
-Retrieve ranked candidate recommendations.
-
-**Request body:** None
-
-**Success response (200):**
-- demand_id — identifier
-- candidates — list of ranked candidates
-  - candidateId — unique ID
-  - name — candidate name
-  - primaryRole — role
-  - sTotal — suitability score
-  - availabilityLabel — availability status
-  - currentAllocationPercentage — workload
-
-**Error responses:**
-- 404 — demand not found
-
-**Example:**
-Response: { "demand_id": "D001", "candidates": [{ "candidateId": "EMP-001", "name": "Thabo", "primaryRole": "Frontend Engineer", "sTotal": 87.6, "availabilityLabel": "Available Now", "currentAllocationPercentage": 40 }] }
-
----
-
-## GET /workspace/{demand_id}/candidates/{candidateId}/breakdown
-Retrieve scoring breakdown and explanation.
-
-**Request body:** None
-
-**Success response (200):**
-- candidateId — identifier
-- sSkill — skill match score
-- sAvailability — availability score
-- sRole — role alignment score
-- sTotal — total score
-- reason — explanation text
-
-**Error responses:**
-- 404 — not found
-
-**Example:**
-Response: { "candidateId": "EMP-001", "sSkill": 90, "sAvailability": 70, "sRole": 100, "sTotal": 87.6, "reason": "Strong skills and role match with moderate availability" }
-
----
-
-## GET /api/health
-Check backend health.
-
-**Request body:** None
-
-**Success response (200):**
-- status — system health
-- timestamp — ISO timestamp
-- uptime — server uptime
-
-**Error responses:**
-- 500 — server error
-
-**Example:**
-Response: { "status": "OK", "timestamp": "2026-06-23T09:00:00Z", "uptime": 12345 }
-
----
-
-## GET /api/info
-Retrieve API metadata.
-
-**Request body:** None
-
-**Success response (200):**
-- name — API name
-- version — version number
-- environment — runtime environment
-
-**Error responses:**
-- 500 — server error
-
-**Example:**
-Response: { "name": "SquadForge API", "version": "1.0.0", "environment": "dev" }
-
----
-
-## POST /api/echo
-Echo request payload.
+### POST /score
+Trigger deterministic scoring for a specific demand.
 
 **Request body:**
-- payload (object, required) — any JSON object
+- `demandId` (string, required)
 
-**Success response (200):**
-- payload — echoed body
-- receivedAt — timestamp
+**Success response (200 OK):**
+Returns a ranked list of candidates with suitability scores and explanations.
+- `demandId` (string)
+- `ranked` (array):
+    - `candidateId` (string)
+    - `name` (string)
+    - `primaryRole` (enum)
+    - `sTotal` (number) — Total suitability (0-100%)
+    - `breakdown` (object):
+        - `sSkill` (number) — Skill Match score
+        - `sAvail` (number) — Availability score
+        - `sRole` (number) — Role Fit score
+    - `availabilityLabel` (string) — e.g., "Available Now"
+    - `currentAllocationPercentage` (number)
+    - `reason` (string) — Rule-based explanation (REQ-7.4)
 
-**Error responses:**
-- 400 — invalid input
-
-**Example:**
-Request: { "payload": { "message": "test" } }
-Response: { "payload": { "message": "test" }, "receivedAt": "2026-06-23T09:00:00Z" }
+**Notable Errors:**
+- `404`: Demand not found.
 
 ---
 
-## POST /squad
-Create a proposed squad workspace.
+### GET /demands/:id/candidates/:candidateId/breakdown
+Retrieve detailed scoring breakdown for a specific candidate relative to a demand.
+
+**Success response (200 OK):**
+- `candidateId` (string)
+- `sTotal`, `sSkill`, `sAvail`, `sRole` (numbers)
+- `rawValues` (object):
+    - `skillsMatched` (array of strings)
+    - `allocation` (number)
+    - `isExactRoleMatch` (boolean)
+- `reason` (string)
+
+---
+
+## 2. Squad Builder
+
+### POST /squads
+Create a new proposed squad workspace for a demand.
 
 **Request body:**
-- demand_id (string, required) — associated demand
+- `demandId` (string, required)
+- `squadName` (string, required)
 
-**Success response (201):**
-- squad_id — identifier
-- filledSeats — 0
-
-**Error responses:**
-- 404 — demand not found
-
-**Example:**
-Request: { "demand_id": "D001" }
-Response: { "squad_id": "SQ1", "filledSeats": 0 }
+**Success response (201 Created):**
+- `id` (string) — Squad ID
+- `demandId` (string)
+- `status` (string) — "DRAFT"
+- `filledSeats` (number) — 0
 
 ---
 
-## POST /squad/{squad_id}/members
-Assign candidate to squad.
+### POST /squads/:id/members
+Assign an employee to the proposed squad.
 
 **Request body:**
-- candidateId (string, required) — candidate to assign
+- `employeeId` (string, required)
 
-**Success response (200):**
-- squad_id — identifier
-- filledSeats — updated count
+**Success response (201 Created):**
+- `squadId` (string)
+- `employeeId` (string)
+- `filledSeats` (number) — Updated count
 
-**Error responses:**
-- 400 — duplicate assignment
-- 404 — squad not found
-
-**Example:**
-Request: { "candidateId": "EMP-001" }
-Response: { "squad_id": "SQ1", "filledSeats": 1 }
+**Notable Errors:**
+- `409 Conflict`: Employee already assigned to this squad or over capacity (REQ-8.2).
 
 ---
 
-## DELETE /squad/{squad_id}/members/{candidateId}
-Remove candidate from squad.
+### DELETE /squads/:id/members/:employeeId
+Remove an employee from the proposed squad.
 
-**Request body:** None
-
-**Success response (200):**
-- squad_id — identifier
-- filledSeats — updated count
-
-**Error responses:**
-- 404 — not found
-
-**Example:**
-Response: { "squad_id": "SQ1", "filledSeats": 0 }
+**Success response (204 No Content)**
 
 ---
 
-## POST /squad/{squad_id}/finalize
-Finalize squad selection.
+### PATCH /squads/:id/status
+Update squad status (e.g., finalize).
 
-**Request body:** None
+**Request body:**
+- `status` (enum) — `FINALIZED`, `ABANDONED`
 
-**Success response (200):**
-- squad_id — identifier
-- status — "FINALIZED"
-- summary — selected members
+**Success response (200 OK):**
+- Returns the updated squad object.
 
-**Error responses:**
-- 400 — empty squad
-
-**Example:**
-Response: { "squad_id": "SQ1", "status": "FINALIZED" }
+**Logic:**
+Finalizing a squad triggers the transactional update of member allocation percentages (Arch §8).
 
 ---
 
-## POST /squad/{squad_id}/reset
-Reset squad workspace.
+### POST /squads/:id/reset
+Clear all candidates from the squad workspace.
 
-**Request body:** None
+**Success response (200 OK):**
+- `id` (string)
+- `filledSeats` (number) — 0
 
-**Success response (200):**
-- squad_id — identifier
-- filledSeats — 0
+---
 
-**Error responses:**
-- 404 — squad not found
+### GET /squads/:id/export
+Export a summary of the squad for reporting.
 
-**Example:**
-Response: { "squad_id": "SQ1", "filledSeats": 0 }
+**Success response (200 OK):**
+- `projectCode` (string)
+- `businessDomain` (string)
+- `squadIntent` (string)
+- `members` (array of employee details and scores)
+ 
