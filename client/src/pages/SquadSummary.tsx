@@ -88,7 +88,7 @@ export const SquadSummary = (): JSX.Element => {
 
   // Combine: show persisted squads from API + current in-memory squad if not yet persisted
   const currentSquadInList = squads.find((s) => s.id === state.squadId);
-  const showCurrentSquad = state.squad.length > 0 && !currentSquadInList;
+  const showCurrentSquad = state.squad.length > 0 && !currentSquadInList && state.squadStatus !== 'finalized';
 
   return (
     <div className="p-sm md:p-lg">
