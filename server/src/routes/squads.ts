@@ -20,6 +20,46 @@ const UpdateStatusSchema = z.object({
   status: z.enum(['FINALIZED', 'ABANDONED']),
 });
 
+// GET /api/squads — List all squads
+router.get('/squads', async (_req: Request, res: Response) => {
+  try {
+    const squads = await prisma.proposedSquad.findMany({
+      include: {
+        demand: true,
+        members: {
+          include: { employee: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const data = squads.map((squad) => ({
+      id: squad.id,
+      squadName: squad.squadName,
+      demandId: squad.demandId,
+      status: squad.status,
+      filledSeats: squad.members.length,
+      projectCode: squad.demand.projectCode,
+      businessDomain: squad.demand.businessDomain,
+      squadIntent: squad.demand.squadIntent,
+      members: squad.members.map((m) => ({
+        employeeId: m.employeeId,
+        name: m.employee.fullName,
+        primaryRole: m.employee.primaryRole,
+      })),
+      createdAt: squad.createdAt,
+      updatedAt: squad.updatedAt,
+    }));
+
+    res.status(200).json({ data });
+  } catch (error) {
+    console.error('[GET /api/squads] Failed to list squads:', error);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to list squads.' },
+    });
+  }
+});
+
 // POST /api/squads — Create a new draft squad
 router.post('/squads', async (req: Request, res: Response) => {
   try {

@@ -2,6 +2,32 @@ import type { DemandCriteria, DemandRequest, Employee, ScoredCandidate, SquadMem
 
 const BASE_URL = '/api';
 
+export interface SquadListItem {
+  id: string;
+  squadName: string;
+  demandId: string;
+  status: string;
+  filledSeats: number;
+  projectCode: string;
+  businessDomain: string;
+  squadIntent: string;
+  members: { employeeId: string; name: string; primaryRole: string }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const fetchSquads = async (): Promise<SquadListItem[]> => {
+  const response = await fetch(`${BASE_URL}/squads`);
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Failed to fetch squads.');
+  }
+
+  const result = await response.json();
+  return result.data;
+};
+
 export const submitDemand = async (
   criteria: DemandCriteria,
 ): Promise<{ demandId: string; demand: DemandRequest }> => {
